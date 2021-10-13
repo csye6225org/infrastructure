@@ -51,10 +51,10 @@ https://signin.aws.amazon.com
 
 ### 3. Demo Infrastructure using Terraform:
 
-1. Go to your infrastructure local repository.
+1. Go to your infrastructure local repository, main branch.
 
 ```
-# cd /home/varad/Desktop/NSC/Github/infrastructure
+# cd /home/varad/Desktop/NSC/Github/infrastructure && git checkout main
 ```
 
 2. Check contents of terraform.tfvars
