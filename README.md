@@ -91,6 +91,7 @@ https://signin.aws.amazon.com
 9. Change the CIDR blocks so that they don't overlap with first VPC and subnets from first Infrastructure.
 <br>
 Use contents from the following file.
+<br>
 
 ```
 # cat /home/varad/Desktop/NSC/Github/helper/unique1.tfvars
