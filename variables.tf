@@ -14,3 +14,11 @@ variable "subnet_az_cidr" {
   type        = map(string)
   description = "Availability zone to CIDR map for subnet"
 }
+
+// 3. 
+// This will take CIDR Block 
+// For destination in route in route table 
+variable "rt_destination_cidr_block"{
+  type = string
+  description = "Destination CIDR block for Route Table"
+}
