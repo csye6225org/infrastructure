@@ -1,4 +1,6 @@
-resource "aws_vpc" "vpc_a2" {
+
+// Virtual Private Cloud
+resource "aws_vpc" "vpc" {
   cidr_block                       = var.vpc_cidr_block
   enable_dns_hostnames             = true
   enable_dns_support               = true
@@ -6,51 +8,63 @@ resource "aws_vpc" "vpc_a2" {
   assign_generated_ipv6_cidr_block = false
 
   tags = {
-    Name = "vpc_a2"
+    Name = "vpc"
   }
 }
 
-resource "aws_subnet" "subnet_a2" {
+// Subnet
+// There are 3 subnets, each in a seperate availability zone
+// The depends on specifies an explicit dependency of these subnets on vpc
+resource "aws_subnet" "subnet" {
 
-  // Specifying an explicit dependency of this subnet on vpc 
-  depends_on = [aws_vpc.vpc_a2]
+  depends_on = [aws_vpc.vpc]
 
-  vpc_id = aws_vpc.vpc_a2.id
+  vpc_id = aws_vpc.vpc.id
 
   for_each          = var.subnet_az_cidr
   availability_zone = each.key
   cidr_block        = each.value
 
   tags = {
-    Name = "subnet_a2"
+    Name = "subnet"
   }
 }
 
-resource "aws_internet_gateway" "igw_a2" {
-  vpc_id = aws_vpc.vpc_a2.id
+// Internet Gateway
+// For the Vpc
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.vpc.id
 
   tags = {
-    Name = "igw_a2"
+    Name = "igw"
   }
 }
 
-resource "aws_route_table" "public_rt_a2" {
-  vpc_id     = aws_vpc.vpc_a2.id
+// Route table
+// This is a custom route table
+// Has  route in between every IPv4 addresses and 
+// Internet gateway
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.vpc.id
 
   route {
-      cidr_block = "0.0.0.0/0"
-      gateway_id = aws_internet_gateway.igw_a2.id
-    }
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
 
   tags = {
-    Name = "public_route_table_a2"
+    Name = "public_rt"
   }
 }
 
-resource "aws_route_table_association" "rta_a2" {
+// Route table association 
+// Shows association in between subnets and public route table
+// Destination: Subnet
+// Target: Route table
+resource "aws_route_table_association" "rta" {
 
   for_each = var.subnet_az_cidr
 
-  subnet_id      = aws_subnet.subnet_a2[each.key].id
-  route_table_id = aws_route_table.public_rt_a2.id
+  subnet_id      = aws_subnet.subnet[each.key].id
+  route_table_id = aws_route_table.public_rt.id
 }
