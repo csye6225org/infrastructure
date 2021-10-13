@@ -6,7 +6,6 @@
 2. HashiCorp Terraform
 ```
 
-
 # Assignment 2: How to Demo?
 
 ### 1. Git Demo:
