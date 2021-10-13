@@ -91,40 +91,47 @@ https://signin.aws.amazon.com
 9. Change the CIDR blocks so that they don't overlap with first VPC and subnets from first Infrastructure.
 <br>
 Use contents from the following file.
+
 ```
 # cat /home/varad/Desktop/NSC/Github/helper/unique1.tfvars
 ```
+
 10. Initialize terraform in the new clone
 ```
 # terraform init
 ```
+
 11. Format terraform files
 ```
 # terraform fmt
 ```
+
 12. Check infrastructre that will get created
 ```
 # terraform plan
 ```
+
 13. Execute infrastructure creation
 ```
 # terraform apply
 ```
+
 14. Show the second infrastructre in AWS prod account
 <br><br>
+
 15. Destroy first infrastructure
 ```
 # cd /home/varad/Desktop/NSC/Github/infrastructure/
 # terraform destroy
 ```
 
-15. Destroy second infrastructure
+16. Destroy second infrastructure
 ```
 # cd /home/varad/Desktop/NSC/Github/demoinfra/infrastructure/
 # terraform destroy
 ```
 
-16.  Unset AWS profile 
+17.  Unset AWS profile 
 ```
 # export AWS_PROFILE=
 ```
