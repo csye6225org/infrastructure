@@ -33,6 +33,9 @@ resource "aws_subnet" "subnet" {
 // Internet Gateway
 // For the Vpc
 resource "aws_internet_gateway" "igw" {
+
+  depends_on = [aws_vpc.vpc]
+
   vpc_id = aws_vpc.vpc.id
 
   tags = {
@@ -45,10 +48,13 @@ resource "aws_internet_gateway" "igw" {
 // Has  route in between every IPv4 addresses and 
 // Internet gateway
 resource "aws_route_table" "public_rt" {
+
+  depends_on = [aws_vpc.vpc, aws_internet_gateway.igw]
+
   vpc_id = aws_vpc.vpc.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.rt_destination_cidr_block
     gateway_id = aws_internet_gateway.igw.id
   }
 
@@ -67,4 +73,7 @@ resource "aws_route_table_association" "rta" {
 
   subnet_id      = aws_subnet.subnet[each.key].id
   route_table_id = aws_route_table.public_rt.id
+
+  depends_on = [aws_subnet.subnet, aws_route_table.public_rt]
+
 }
