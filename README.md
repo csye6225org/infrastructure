@@ -131,7 +131,7 @@ Use contents from the following file.
 # terraform destroy
 ```
 
-17.  Unset AWS profile 
+17.  Unset AWS profile and Cleanup 
 ```
 # export AWS_PROFILE=
 # rm -rf /home/varad/Desktop/NSC/Github/demoinfra/
