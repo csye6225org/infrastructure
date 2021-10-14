@@ -134,4 +134,5 @@ Use contents from the following file.
 17.  Unset AWS profile 
 ```
 # export AWS_PROFILE=
+# rm -rf /home/varad/Desktop/NSC/Github/demoinfra/
 ```
