@@ -2,8 +2,8 @@
 
 ### Tech Stack
 ```
-1. AWS cloud
-2. HashiCorp Terraform
+1. Amazon Web Services
+2. Hashicorp Terraform
 ```
 
 # Assignment 2: How to Demo?
