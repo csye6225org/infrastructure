@@ -74,3 +74,4 @@ resource "aws_route_table_association" "rta" {
   depends_on = [aws_subnet.subnet, aws_route_table.public_rt]
 
 }
+
