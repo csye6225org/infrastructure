@@ -152,6 +152,7 @@ resource "random_string" "randomstring" {
 
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = format("%s.%s.%s", random_string.randomstring.result, var.enviornment, var.domain_name)
+  force_destroy = true
   lifecycle_rule {
     enabled = true
     transition {
@@ -195,6 +196,7 @@ resource "aws_db_instance" "rds" {
   publicly_accessible  = var.rds_db_public_accessibility
   name                 = var.rds_db_name
   skip_final_snapshot  = var.rds_db_skip_final_snapshot
+  vpc_security_group_ids = [aws_security_group.database_sg.id]
 }
 
 // EC2 Instance
@@ -214,22 +216,73 @@ resource "aws_instance" "ec2" {
     volume_type           = var.ec2_volume_type
     volume_size           = var.ec2_volume_size
   }
-  user_data = <<-EOF
-              #!/bin/bash
-              export DB_HOST=${aws_db_instance.rds.address}
-              export DB_PORT=${aws_db_instance.rds.port}
-              export DB_DATABASE=${var.ec2_env_db_name}
-              export DB_USERNAME=${var.ec2_env_db_username}
-              export DB_PASSWORD=${var.ec2_env_db_password}
-              # export FILESYSTEM_DRIVER=s3
-              export S3_BUCKET_NAME=${aws_s3_bucket.s3_bucket.bucket}
-              export S3_BUCKET_ID=${aws_s3_bucket.s3_bucket.id}
-              export AWS_DEFAULT_REGION=${var.ec2_env_aws_region}
-              export AWS_ACCESS_KEY=${var.ec2_env_aws_access_key}
-              export AWS_SECRET_ACCESS_KEY=${var.ec2_env_aws_secret_access_key}
+  user_data = <<EOF
+#!/bin/bash
+echo "# App Environment Variables"
+echo "export DB_HOST=${aws_db_instance.rds.address}" >> /etc/environment
+echo "export DB_PORT=${aws_db_instance.rds.port}" >> /etc/environment
+echo "export DB_DATABASE=${var.ec2_env_db_name}" >> /etc/environment
+echo "export DB_USERNAME=${var.ec2_env_db_username}" >> /etc/environment
+echo "export DB_PASSWORD=${var.ec2_env_db_password}" >> /etc/environment
+echo "export FILESYSTEM_DRIVER=s3" >> /etc/environment
+echo "export AWS_BUCKET=${aws_s3_bucket.s3_bucket.id}" >> /etc/environment
+echo "export S3_BUCKET_NAME=${aws_s3_bucket.s3_bucket.bucket}" >> /etc/enviornment
+echo "export AWS_DEFAULT_REGION=${var.ec2_env_aws_region}" >> /etc/environment
+echo "export AWS_ACCESS_KEY=${var.ec2_env_aws_access_key}" >> /etc/environment
+echo "export AWS_SECRET_ACCESS_KEY=${var.ec2_env_aws_secret_access_key}" >> /etc/environment
+chown -R ubuntu:www-data /var/www
+usermod -a -G www-data ubuntu
               EOF
 
   tags = {
     "Name" = "ec2"
   }
 } 
+
+// IAM role for EC2 Instance
+resource "aws_iam_role" "ec2_iam_role" {
+  name               = "EC2-CSYE6225"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17", 
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole", 
+      "Effect": "Allow", 
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      }
+    }
+  ]
+}
+EOF
+  tags = {
+    "Name" = "EC2-CSYE6225"
+  }
+}
+
+// S3 IAM policy document
+data "aws_iam_policy_document" "s3_iam_policy_document" {
+  version = "2012-10-17"
+  statement {
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      "${aws_s3_bucket.s3_bucket.arn}",
+      "${aws_s3_bucket.s3_bucket.arn}/*"
+    ]
+  }
+  depends_on = [aws_s3_bucket.s3_bucket]
+}
+
+// IAM role for S3 bucket
+resource "aws_iam_role_policy" "s3_iam_role" {
+  name       = "WebAppS3"
+  role       = aws_iam_role.ec2_iam_role.id
+  policy     = data.aws_iam_policy_document.s3_iam_policy_document.json
+  depends_on = [aws_s3_bucket.s3_bucket]
+}
