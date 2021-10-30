@@ -150,7 +150,7 @@ resource "random_string" "randomstring" {
   upper   = false
 }
 
-resource "aws_s3_bucket" "s3_bucket" {
+resource "aws_s3_bucket" "  " {
   bucket = format("%s.%s.%s", random_string.randomstring.result, var.enviornment, var.domain_name)
   force_destroy = true
   lifecycle_rule {
