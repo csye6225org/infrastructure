@@ -1,5 +1,8 @@
+//############################################
 // Virtual Private Cloud
+//############################################
 
+// Virtual private cloud
 resource "aws_vpc" "vpc" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_hostnames = true
@@ -86,6 +89,10 @@ resource "aws_route_table_association" "rta3" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+//############################################
+// Security Groups
+//############################################
+
 // Application Security Group
 
 resource "aws_security_group" "application_sg" {
@@ -142,16 +149,20 @@ resource "aws_security_group" "database_sg" {
   }
 }
 
+//############################################
 // S3 Bucket
+//############################################
 
+// Random string for bucket name
 resource "random_string" "randomstring" {
   length  = 10
   special = false
   upper   = false
 }
 
-resource "aws_s3_bucket" "  " {
-  bucket = format("%s.%s.%s", random_string.randomstring.result, var.enviornment, var.domain_name)
+// S3 Bucket
+resource "aws_s3_bucket" "s3_bucket" {
+  bucket        = format("%s.%s.%s", random_string.randomstring.result, var.enviornment, var.domain_name)
   force_destroy = true
   lifecycle_rule {
     enabled = true
@@ -169,7 +180,36 @@ resource "aws_s3_bucket" "  " {
   }
 }
 
+// IAM role for S3 bucket
+resource "aws_iam_role_policy" "s3_iam_role" {
+  name       = "WebAppS3"
+  role       = aws_iam_role.ec2_iam_role.id
+  policy     = data.aws_iam_policy_document.s3_iam_policy_document.json
+  depends_on = [aws_s3_bucket.s3_bucket]
+}
+
+// S3 IAM policy document
+data "aws_iam_policy_document" "s3_iam_policy_document" {
+  version = "2012-10-17"
+  statement {
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      "${aws_s3_bucket.s3_bucket.arn}",
+      "${aws_s3_bucket.s3_bucket.arn}/*"
+    ]
+  }
+  depends_on = [aws_s3_bucket.s3_bucket]
+}
+
+
+//############################################
 // Relational Database
+//############################################
 
 resource "aws_db_parameter_group" "db_pg" {
   family = var.rds_family
@@ -183,33 +223,36 @@ resource "aws_db_subnet_group" "db_sg" {
 }
 
 resource "aws_db_instance" "rds" {
-  allocated_storage    = var.rds_allocated_storage
-  engine               = var.rds_engine
-  engine_version       = var.rds_engine_version
-  instance_class       = var.rds_db_instance_class
-  multi_az             = var.rds_multi_az_allowance
-  identifier           = var.rds_db_identifier
-  username             = var.rds_db_username
-  password             = var.rds_db_password
-  db_subnet_group_name = aws_db_subnet_group.db_sg.id
-  parameter_group_name = aws_db_parameter_group.db_pg.id
-  publicly_accessible  = var.rds_db_public_accessibility
-  name                 = var.rds_db_name
-  skip_final_snapshot  = var.rds_db_skip_final_snapshot
+  allocated_storage      = var.rds_allocated_storage
+  engine                 = var.rds_engine
+  engine_version         = var.rds_engine_version
+  instance_class         = var.rds_db_instance_class
+  multi_az               = var.rds_multi_az_allowance
+  identifier             = var.rds_db_identifier
+  username               = var.rds_db_username
+  password               = var.rds_db_password
+  db_subnet_group_name   = aws_db_subnet_group.db_sg.id
+  parameter_group_name   = aws_db_parameter_group.db_pg.id
+  publicly_accessible    = var.rds_db_public_accessibility
+  name                   = var.rds_db_name
+  skip_final_snapshot    = var.rds_db_skip_final_snapshot
   vpc_security_group_ids = [aws_security_group.database_sg.id]
 }
 
+//############################################
 // EC2 Instance
+//############################################
 
 resource "aws_instance" "ec2" {
-  ami                     = var.ec2_source_ami
-  instance_type           = var.ec2_instance_type
-  security_groups         = [aws_security_group.application_sg.id]
-  depends_on              = [aws_db_instance.rds]
-  subnet_id               = aws_subnet.subnet1.id
+  ami             = var.ec2_source_ami
+  instance_type   = var.ec2_instance_type
+  security_groups = [aws_security_group.application_sg.id]
+  depends_on      = [aws_db_instance.rds]
+  subnet_id       = aws_subnet.subnet1.id
   // disable_api_termination = var.ec2_disable_api_termination_flag
   associate_public_ip_address = var.ec2_public_ipv4_association_flag
-  key_name = var.ec2_ssh_key_name
+  key_name                    = var.ec2_ssh_key_name
+  iam_instance_profile        = aws_iam_instance_profile.ec2_iam_profile.id
   ebs_block_device {
     device_name           = var.ec2_device_name
     delete_on_termination = var.ec2_delete_on_termination_flag
@@ -227,8 +270,7 @@ echo "export DB_PASSWORD=${var.ec2_env_db_password}" >> /etc/environment
 echo "export FILESYSTEM_DRIVER=s3" >> /etc/environment
 echo "export AWS_BUCKET_NAME=${aws_s3_bucket.s3_bucket.id}" >> /etc/environment
 echo "export AWS_DEFAULT_REGION=${var.ec2_env_aws_region}" >> /etc/environment
-echo "export AWS_ACCESS_KEY=${var.ec2_env_aws_access_key}" >> /etc/environment
-echo "export AWS_SECRET_ACCESS_KEY=${var.ec2_env_aws_secret_access_key}" >> /etc/environment
+echo "export CODE_DEPLOY_BUCKET=${var.ec2_env_code_deploy_bucket}" >> /etc/environment
 chown -R ubuntu:www-data /var/www
 usermod -a -G www-data ubuntu
               EOF
@@ -236,7 +278,11 @@ usermod -a -G www-data ubuntu
   tags = {
     "Name" = "ec2"
   }
-} 
+}
+
+resource "aws_iam_instance_profile" "ec2_iam_profile" {
+  role = aws_iam_role.ec2_iam_role.name
+}
 
 // IAM role for EC2 Instance
 resource "aws_iam_role" "ec2_iam_role" {
@@ -260,28 +306,4 @@ EOF
   }
 }
 
-// S3 IAM policy document
-data "aws_iam_policy_document" "s3_iam_policy_document" {
-  version = "2012-10-17"
-  statement {
-    actions = [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:DeleteObject",
-      "s3:ListBucket"
-    ]
-    resources = [
-      "${aws_s3_bucket.s3_bucket.arn}",
-      "${aws_s3_bucket.s3_bucket.arn}/*"
-    ]
-  }
-  depends_on = [aws_s3_bucket.s3_bucket]
-}
 
-// IAM role for S3 bucket
-resource "aws_iam_role_policy" "s3_iam_role" {
-  name       = "WebAppS3"
-  role       = aws_iam_role.ec2_iam_role.id
-  policy     = data.aws_iam_policy_document.s3_iam_policy_document.json
-  depends_on = [aws_s3_bucket.s3_bucket]
-}
