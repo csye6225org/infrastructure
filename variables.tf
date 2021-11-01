@@ -14,8 +14,8 @@ variable "rt_destination_cidr_block" {
   type        = string
   description = "Destination CIDR block for Route Table"
 }
-variable "source_cidr_block"{
-  type = string
+variable "source_cidr_block" {
+  type        = string
   description = "Source CIDR block for Application security group"
 }
 variable "enviornment" {
@@ -31,8 +31,8 @@ variable "domain_name" {
 //  Database Variables
 // ############################################
 
-variable "rds_family"{
-  type = string
+variable "rds_family" {
+  type        = string
   description = "Database parameter group family"
 }
 variable "rds_allocated_storage" {
@@ -92,31 +92,31 @@ variable "ec2_instance_type" {
   type        = string
   description = "EC2 Instance type"
 }
-variable "ec2_disable_api_termination_flag"{
+variable "ec2_disable_api_termination_flag" {
   type        = bool
   description = "Disable api termination flag"
 }
-variable "ec2_public_ipv4_association_flag"{
-  type = bool
+variable "ec2_public_ipv4_association_flag" {
+  type        = bool
   description = "Associate public Ipv4 flag"
 }
-variable "ec2_ssh_key_name"{
-  type = string
+variable "ec2_ssh_key_name" {
+  type        = string
   description = "SSH key name to connect with Ec2 instance"
 }
 variable "ec2_device_name" {
   type        = string
   description = "EC2 Device name"
 }
-variable "ec2_delete_on_termination_flag"{
+variable "ec2_delete_on_termination_flag" {
   type        = bool
   description = "EBS block delete on termination flag"
 }
-variable "ec2_volume_type"{
+variable "ec2_volume_type" {
   type        = string
   description = "EBS block volume type"
 }
-variable "ec2_volume_size"{
+variable "ec2_volume_size" {
   type        = number
   description = "EBS block volume size"
 }
@@ -125,29 +125,25 @@ variable "ec2_volume_size"{
 //  Ec2 Instance Enviornment Variables
 // ############################################
 
-variable "ec2_env_db_name"{
-  type = string
+variable "ec2_env_db_name" {
+  type        = string
   description = "Database name in AWS RDS"
 }
-variable "ec2_env_db_username"{
-  type = string
+variable "ec2_env_db_username" {
+  type        = string
   description = "Database username in AWS RDS"
 }
-variable "ec2_env_db_password"{
-  type = string
+variable "ec2_env_db_password" {
+  type        = string
   description = "Database password in AWS RDS"
 }
-variable "ec2_env_aws_region"{
-  type = string
+variable "ec2_env_aws_region" {
+  type        = string
   description = "AWS Region"
 }
-variable "ec2_env_aws_access_key"{
-  type = string
-  description = "AWS access key"
-}
-variable "ec2_env_aws_secret_access_key"{
-  type = string
-  description = "AWS secret access key"
+variable "ec2_env_code_deploy_bucket" {
+  type        = string
+  description = "AWS Code Deploy bucket"
 }
 
 
