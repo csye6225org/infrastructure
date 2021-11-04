@@ -406,10 +406,15 @@ resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
 // Route 53
 //############################################
 
-// resource "aws_route53_record" "www" {
-//   zone_id = aws_route53_zone.primary.zone_id
-//   name    = "www.example.com"
-//   type    = "A"
-//   ttl     = "300"
-//   records = [aws_eip.lb.public_ip]
-// }
+data "aws_route53_zone" "primary" {
+  name         = "${var.enviornment}.${var.domain_name}"
+  private_zone = false
+}
+
+resource "aws_route53_record" "www" {
+  zone_id = data.aws_route53_zone.primary.zone_id
+  name    = "${var.enviornment}.${var.domain_name}"
+  type    = "A"
+  ttl     = "300"
+  records = [aws_instance.ec2.public_ip]
+}
