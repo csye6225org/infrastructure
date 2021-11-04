@@ -244,7 +244,8 @@ resource "aws_db_instance" "rds" {
 //############################################
 
 resource "aws_instance" "ec2" {
-  ami             = var.ec2_source_ami
+  ami             = data.aws_ami.shared_ami.id
+  // ami =  var.ec2_source_ami
   instance_type   = var.ec2_instance_type
   security_groups = [aws_security_group.application_sg.id]
   depends_on      = [aws_db_instance.rds]
@@ -278,6 +279,11 @@ usermod -a -G www-data ubuntu
   tags = {
     "Name" = "ec2"
   }
+}
+
+data "aws_ami" "shared_ami" {
+  most_recent = true
+  owners = [var.dev_account_id]
 }
 
 resource "aws_iam_instance_profile" "ec2_iam_profile" {
