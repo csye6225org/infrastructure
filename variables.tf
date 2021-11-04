@@ -146,4 +146,7 @@ variable "ec2_env_code_deploy_bucket" {
   description = "AWS Code Deploy bucket"
 }
 
-
+variable "dev_account_id" {
+  type        = string
+  description = "Dev Account Id"
+}

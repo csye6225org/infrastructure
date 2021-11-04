@@ -244,7 +244,8 @@ resource "aws_db_instance" "rds" {
 //############################################
 
 resource "aws_instance" "ec2" {
-  ami             = var.ec2_source_ami
+  ami             = data.aws_ami.shared_ami.id
+  // ami =  var.ec2_source_ami
   instance_type   = var.ec2_instance_type
   security_groups = [aws_security_group.application_sg.id]
   depends_on      = [aws_db_instance.rds]
@@ -280,6 +281,11 @@ usermod -a -G www-data ubuntu
   }
 }
 
+data "aws_ami" "shared_ami" {
+  most_recent = true
+  owners = [var.dev_account_id]
+}
+
 resource "aws_iam_instance_profile" "ec2_iam_profile" {
   role = aws_iam_role.ec2_iam_role.name
 }
@@ -307,3 +313,114 @@ EOF
 }
 
 
+resource "aws_iam_policy" "CodeDeploy-EC2-S3" {
+  name        = "CodeDeploy-EC2-S3"
+  description = "Github actions application policy"
+  policy      = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::${var.ec2_env_code_deploy_bucket}",
+        "arn:aws:s3:::${var.ec2_env_code_deploy_bucket}/*"
+      ]
+    }
+  ]
+}
+EOF
+  tags = {
+    "Name" = "CodeDeploy-EC2-S3"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = aws_iam_policy.CodeDeploy-EC2-S3.arn
+}
+
+
+//############################################
+// CodeDeploy Application
+//############################################
+
+resource "aws_codedeploy_app" "app" {
+  name = "csye6225-webapp"
+}
+resource "aws_codedeploy_deployment_group" "example" {
+    depends_on = [aws_codedeploy_app.app]
+
+  app_name="csye6225-webapp"
+  deployment_group_name="csye6225-webapp-deployment"
+  service_role_arn       = aws_iam_role.CodeDeployServiceRole.arn
+  deployment_config_name = "CodeDeployDefault.AllAtOnce"
+  deployment_style {
+    deployment_type   = "IN_PLACE"
+    deployment_option = "WITHOUT_TRAFFIC_CONTROL"
+  }
+
+  auto_rollback_configuration {
+    enabled = true
+    events  = ["DEPLOYMENT_FAILURE"]
+  }
+
+    ec2_tag_set {
+    ec2_tag_filter {
+      key   = "Name"
+      type  = "KEY_AND_VALUE"
+      value = "ec2"
+    }
+  }
+}
+
+
+resource "aws_iam_role" "CodeDeployServiceRole" {
+  name = "CodeDeployServiceRole"
+  description = "Allows CodeDeploy to call AWS services on your behalf"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "codedeploy.amazonaws.com"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
+  role       = aws_iam_role.CodeDeployServiceRole.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+}
+
+
+//############################################
+// Route 53
+//############################################
+
+data "aws_route53_zone" "primary" {
+  name         = "${var.enviornment}.${var.domain_name}"
+  private_zone = false
+}
+
+resource "aws_route53_record" "www" {
+  zone_id = data.aws_route53_zone.primary.zone_id
+  name    = "${var.enviornment}.${var.domain_name}"
+  type    = "A"
+  ttl     = "300"
+  records = [aws_instance.ec2.public_ip]
+}
