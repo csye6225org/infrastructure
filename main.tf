@@ -93,45 +93,34 @@ resource "aws_route_table_association" "rta3" {
 // Security Groups
 //############################################
 
-// Application Security Group
+// Load balancer security group
 
-// resource "aws_security_group" "application_sg" {
-//   name   = "application_sg"
-//   vpc_id = aws_vpc.vpc.id
-//   ingress {
-//     from_port   = 22
-//     to_port     = 22
-//     protocol    = "tcp"
-//     cidr_blocks = [var.source_cidr_block]
-//   }
-//   ingress {
-//     from_port   = 80
-//     to_port     = 80
-//     protocol    = "tcp"
-//     cidr_blocks = [var.source_cidr_block]
-//   }
-//   ingress {
-//     from_port   = 443
-//     to_port     = 443
-//     protocol    = "tcp"
-//     cidr_blocks = [var.source_cidr_block]
-//   }
-//   ingress {
-//     from_port   = 8080
-//     to_port     = 8080
-//     protocol    = "tcp"
-//     cidr_blocks = [var.source_cidr_block]
-//   }
-//   egress {
-//     from_port   = 0
-//     to_port     = 0
-//     protocol    = "-1"
-//     cidr_blocks = ["0.0.0.0/0"]
-//   }
-//   tags = {
-//     Name = "application_sg"
-//   }
-// }
+resource "aws_security_group" "alb_sg" {
+  name   = "alb_sg"
+  vpc_id = aws_vpc.vpc.id
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.source_cidr_block]
+  }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.source_cidr_block]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "alb_sg"
+  }
+}
+
 
 // Database Security Group
 
@@ -240,46 +229,8 @@ resource "aws_db_instance" "rds" {
 }
 
 //############################################
-// EC2 Instance
+// EC2 Instance Ami, Role, Policy
 //############################################
-
-// resource "aws_instance" "ec2" {
-//   ami             = data.aws_ami.shared_ami.id
-//   // ami =  var.ec2_source_ami
-//   instance_type   = var.ec2_instance_type
-//   security_groups = [aws_security_group.application_sg.id]
-//   depends_on      = [aws_db_instance.rds]
-//   subnet_id       = aws_subnet.subnet1.id
-//   // disable_api_termination = var.ec2_disable_api_termination_flag
-//   associate_public_ip_address = var.ec2_public_ipv4_association_flag
-//   key_name                    = var.ec2_ssh_key_name
-//   iam_instance_profile        = aws_iam_instance_profile.ec2_iam_profile.id
-//   ebs_block_device {
-//     device_name           = var.ec2_device_name
-//     delete_on_termination = var.ec2_delete_on_termination_flag
-//     volume_type           = var.ec2_volume_type
-//     volume_size           = var.ec2_volume_size
-//   }
-//   user_data = <<EOF
-// #!/bin/bash
-// echo "# App Environment Variables"
-// echo "export DB_HOST=${aws_db_instance.rds.address}" >> /etc/environment
-// echo "export DB_PORT=${aws_db_instance.rds.port}" >> /etc/environment
-// echo "export DB_DATABASE=${var.ec2_env_db_name}" >> /etc/environment
-// echo "export DB_USERNAME=${var.ec2_env_db_username}" >> /etc/environment
-// echo "export DB_PASSWORD=${var.ec2_env_db_password}" >> /etc/environment
-// echo "export FILESYSTEM_DRIVER=s3" >> /etc/environment
-// echo "export AWS_BUCKET_NAME=${aws_s3_bucket.s3_bucket.id}" >> /etc/environment
-// echo "export AWS_DEFAULT_REGION=${var.ec2_env_aws_region}" >> /etc/environment
-// echo "export CODE_DEPLOY_BUCKET=${var.ec2_env_code_deploy_bucket}" >> /etc/environment
-// chown -R ubuntu:www-data /var/www
-// usermod -a -G www-data ubuntu
-//               EOF
-
-//   tags = {
-//     "Name" = "ec2"
-//   }
-// }
 
 data "aws_ami" "shared_ami" {
   most_recent = true
@@ -431,10 +382,10 @@ resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
 // Route 53
 //############################################
 
-// data "aws_route53_zone" "primary" {
-//   name         = "${var.enviornment}.${var.domain_name}"
-//   private_zone = false
-// }
+data "aws_route53_zone" "primary" {
+  name         = "${var.enviornment}.${var.domain_name}"
+  private_zone = false
+}
 
 // resource "aws_route53_record" "www" {
 //   zone_id = data.aws_route53_zone.primary.zone_id
@@ -443,6 +394,19 @@ resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
 //   ttl     = "300"
 //   records = [aws_instance.ec2.public_ip]
 // }
+
+resource "aws_route53_record" "www" {
+  zone_id = data.aws_route53_zone.primary.zone_id
+  name    = "${var.enviornment}.${var.domain_name}"
+  type    = "A"
+  ttl     = "300"
+
+  alias {
+    name                   = aws_lb.alb.dns_name
+    zone_id                = aws_lb.alb.zone_id
+    evaluate_target_health = true
+  }
+}
 
 //############################################
 // Auto Scaling
@@ -478,10 +442,6 @@ echo "export CODE_DEPLOY_BUCKET=${var.ec2_env_code_deploy_bucket}" >> /etc/envir
 chown -R ubuntu:www-data /var/www
 usermod -a -G www-data ubuntu
               EOF
-
-  // tags = {
-  //   "Name" = "asg_launch_config"
-  // }
 }
 
 resource "aws_autoscaling_group" "asg" {
@@ -581,32 +541,3 @@ resource "aws_lb_target_group" "alb_tg" {
     path                = "/"
   }
 }
-
-resource "aws_security_group" "alb_sg" {
-  name   = "alb_sg"
-  vpc_id = aws_vpc.vpc.id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = [var.source_cidr_block]
-  }
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.source_cidr_block]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "alb_sg"
-  }
-}
-
-
-
