@@ -384,27 +384,16 @@ resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
 
 data "aws_route53_zone" "primary" {
   name         = "${var.enviornment}.${var.domain_name}"
-  private_zone = false
 }
-
-// resource "aws_route53_record" "www" {
-//   zone_id = data.aws_route53_zone.primary.zone_id
-//   name    = "${var.enviornment}.${var.domain_name}"
-//   type    = "A"
-//   ttl     = "300"
-//   records = [aws_instance.ec2.public_ip]
-// }
 
 resource "aws_route53_record" "www" {
   zone_id = data.aws_route53_zone.primary.zone_id
   name    = "${var.enviornment}.${var.domain_name}"
   type    = "A"
-  ttl     = "300"
-
   alias {
     name                   = aws_lb.alb.dns_name
     zone_id                = aws_lb.alb.zone_id
-    evaluate_target_health = true
+    evaluate_target_health = false
   }
 }
 
@@ -450,6 +439,7 @@ resource "aws_autoscaling_group" "asg" {
   min_size             = 2
   default_cooldown     = 60
   launch_configuration = aws_launch_configuration.asg_launch_config.name
+  target_group_arns    = ["${aws_lb_target_group.alb_tg.arn}"]
   vpc_zone_identifier  = [aws_subnet.subnet1.id, aws_subnet.subnet2.id, aws_subnet.subnet3.id]
   tag {
     key                 = "Name"
@@ -530,7 +520,7 @@ resource "aws_lb_listener" "alb_listener" {
 
 resource "aws_lb_target_group" "alb_tg" {
   name     = "alb-tg"
-  port     = 8080
+  port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.vpc.id
   health_check {
