@@ -290,11 +290,15 @@ EOF
   }
 }
 
-resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment" {
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_1" {
   role       = aws_iam_role.ec2_iam_role.name
   policy_arn = aws_iam_policy.CodeDeploy-EC2-S3.arn
 }
 
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_2" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
 
 //############################################
 // CodeDeploy Application
