@@ -328,7 +328,6 @@ resource "aws_codedeploy_deployment_group" "example" {
     ec2_tag_filter {
       key  = "Name"
       type = "KEY_AND_VALUE"
-      // value = "ec2"
       value = "asg"
     }
   }
@@ -344,7 +343,7 @@ resource "aws_codedeploy_deployment_group" "example" {
         listener_arns = ["${aws_lb_listener.alb_listener.arn}"]
       }
       target_group {
-        name = "${aws_lb_target_group.alb_tg.name}"
+        name = aws_lb_target_group.alb_tg.name
       }
 
     }
@@ -387,7 +386,7 @@ resource "aws_iam_role_policy_attachment" "codedeploy_role_policy_attachment" {
 //############################################
 
 data "aws_route53_zone" "primary" {
-  name         = "${var.enviornment}.${var.domain_name}"
+  name = "${var.enviornment}.${var.domain_name}"
 }
 
 resource "aws_route53_record" "www" {
@@ -440,7 +439,7 @@ usermod -a -G www-data ubuntu
 resource "aws_autoscaling_group" "asg" {
   desired_capacity     = 3
   max_size             = 5
-  min_size             = 2
+  min_size             = 3
   default_cooldown     = 60
   launch_configuration = aws_launch_configuration.asg_launch_config.name
   target_group_arns    = ["${aws_lb_target_group.alb_tg.arn}"]
