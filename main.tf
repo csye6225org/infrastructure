@@ -104,12 +104,6 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.source_cidr_block]
   }
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.source_cidr_block]
-  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -131,10 +125,36 @@ resource "aws_security_group" "database_sg" {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
+    security_groups = [aws_security_group.webapp_sg.id]
   }
   tags = {
     Name = "database_sg"
+  }
+}
+
+resource "aws_security_group" "webapp_sg" {
+  name   = "webapp_sg"
+  vpc_id = aws_vpc.vpc.id
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.source_cidr_block]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "webapp_sg"
   }
 }
 
@@ -411,7 +431,8 @@ resource "aws_launch_configuration" "asg_launch_config" {
   instance_type               = var.ec2_instance_type
   key_name                    = var.ec2_ssh_key_name
   associate_public_ip_address = var.ec2_public_ipv4_association_flag
-  security_groups             = [aws_security_group.alb_sg.id]
+  #security_groups             = [aws_security_group.alb_sg.id]
+  security_groups = [aws_security_group.webapp_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_iam_profile.id
   root_block_device {
     // device_name           = var.ec2_device_name
