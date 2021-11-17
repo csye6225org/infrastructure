@@ -475,27 +475,27 @@ resource "aws_cloudwatch_metric_alarm" "cwm_scale_up" {
   namespace           = "AWS/EC2"
   period              = "60"
   statistic           = "Average"
-  threshold           = "5"
+  threshold           = "50"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.asg.name
   }
-  alarm_description = "Apply scale_up_policy when CPUUtilization is >= 5%"
+  alarm_description = "Apply scale_up_policy when CPUUtilization is >= 50%"
   alarm_actions     = [aws_autoscaling_policy.scale_up_policy.arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "cwm_scale_down" {
-  alarm_name          = "cwm_down_up"
+  alarm_name          = "cwm_scale_down"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "CPUUtilization"
   namespace           = "AWS/EC2"
   period              = "60"
   statistic           = "Average"
-  threshold           = "3"
+  threshold           = "20"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.asg.name
   }
-  alarm_description = "Apply scale_down_policy when CPUUtilization is <= 3%"
+  alarm_description = "Apply scale_down_policy when CPUUtilization is <= 20%"
   alarm_actions     = [aws_autoscaling_policy.scale_down_policy.arn]
 }
 
