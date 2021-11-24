@@ -80,6 +80,11 @@ variable "rds_db_skip_final_snapshot" {
   description = "Allowance for skipping final snapshot creation"
 }
 
+variable "rds_replica_name" {
+  type        = string
+  description = "Database Read Replica name"
+}
+
 // ############################################
 //  Ec2 Instance Variables
 // ############################################
