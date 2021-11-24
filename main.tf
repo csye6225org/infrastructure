@@ -232,21 +232,38 @@ resource "aws_db_subnet_group" "db_sg" {
 }
 
 resource "aws_db_instance" "rds" {
+  allocated_storage        = var.rds_allocated_storage
+  engine                   = var.rds_engine
+  engine_version           = var.rds_engine_version
+  instance_class           = var.rds_db_instance_class
+  multi_az                 = var.rds_multi_az_allowance
+  identifier               = var.rds_db_identifier
+  username                 = var.rds_db_username
+  password                 = var.rds_db_password
+  db_subnet_group_name     = aws_db_subnet_group.db_sg.id
+  parameter_group_name     = aws_db_parameter_group.db_pg.id
+  publicly_accessible      = var.rds_db_public_accessibility
+  name                     = var.rds_db_name
+  skip_final_snapshot      = var.rds_db_skip_final_snapshot
+  backup_retention_period  = 1
+  delete_automated_backups = false
+  vpc_security_group_ids   = [aws_security_group.database_sg.id]
+}
+
+resource "aws_db_instance" "rds_read_replica" {
+  identifier             = var.rds_replica_name
+  replicate_source_db    = aws_db_instance.rds.id
   allocated_storage      = var.rds_allocated_storage
   engine                 = var.rds_engine
   engine_version         = var.rds_engine_version
   instance_class         = var.rds_db_instance_class
   multi_az               = var.rds_multi_az_allowance
-  identifier             = var.rds_db_identifier
-  username               = var.rds_db_username
-  password               = var.rds_db_password
-  db_subnet_group_name   = aws_db_subnet_group.db_sg.id
-  parameter_group_name   = aws_db_parameter_group.db_pg.id
+  // parameter_group_name   = aws_db_parameter_group.db_pg.id
+  skip_final_snapshot      = var.rds_db_skip_final_snapshot
   publicly_accessible    = var.rds_db_public_accessibility
-  name                   = var.rds_db_name
-  skip_final_snapshot    = var.rds_db_skip_final_snapshot
   vpc_security_group_ids = [aws_security_group.database_sg.id]
 }
+
 
 //############################################
 // EC2 Instance Ami, Role, Policy
@@ -346,8 +363,8 @@ resource "aws_codedeploy_deployment_group" "example" {
 
   ec2_tag_set {
     ec2_tag_filter {
-      key  = "Name"
-      type = "KEY_AND_VALUE"
+      key   = "Name"
+      type  = "KEY_AND_VALUE"
       value = "asg"
     }
   }
@@ -432,8 +449,8 @@ resource "aws_launch_configuration" "asg_launch_config" {
   key_name                    = var.ec2_ssh_key_name
   associate_public_ip_address = var.ec2_public_ipv4_association_flag
   #security_groups             = [aws_security_group.alb_sg.id]
-  security_groups = [aws_security_group.webapp_sg.id]
-  iam_instance_profile        = aws_iam_instance_profile.ec2_iam_profile.id
+  security_groups      = [aws_security_group.webapp_sg.id]
+  iam_instance_profile = aws_iam_instance_profile.ec2_iam_profile.id
   root_block_device {
     // device_name           = var.ec2_device_name
     delete_on_termination = var.ec2_delete_on_termination_flag
@@ -554,4 +571,12 @@ resource "aws_lb_target_group" "alb_tg" {
     timeout             = 3
     path                = "/"
   }
+}
+
+//############################################
+// SNS Topic
+//############################################
+
+resource "aws_sns_topic" "user_updates" {
+  name = "user-updates-topic"
 }
