@@ -155,3 +155,8 @@ variable "dev_account_id" {
   type        = string
   description = "Dev Account Id"
 }
+
+variable "prod_account_id" {
+  type        = string
+  description = "Prod Account Id"
+}

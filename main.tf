@@ -327,6 +327,55 @@ EOF
   }
 }
 
+resource "aws_iam_policy" "DescribeDatabases" {
+  name        = "DescribeDatabases"
+  description = "Describe Databases"
+  policy      = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "rds:DescribeDBInstances"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+EOF
+  tags = {
+    "Name" = "DescribeDatabases"
+  }
+}
+
+
+resource "aws_iam_policy" "PublishSNS" {
+  name        = "PublishSNS"
+  description = "Publish SNS"
+  policy      = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "sns:Publish"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "${aws_sns_topic.user_verification.arn}"
+      ]
+    }
+  ]
+}
+EOF
+  tags = {
+    "Name" = "PublishSNS"
+  }
+}
+
 resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_1" {
   role       = aws_iam_role.ec2_iam_role.name
   policy_arn = aws_iam_policy.CodeDeploy-EC2-S3.arn
@@ -335,6 +384,16 @@ resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_1" {
 resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_2" {
   role       = aws_iam_role.ec2_iam_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_3" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = aws_iam_policy.DescribeDatabases.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_4" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = aws_iam_policy.PublishSNS.arn
 }
 
 //############################################
@@ -577,6 +636,6 @@ resource "aws_lb_target_group" "alb_tg" {
 // SNS Topic
 //############################################
 
-resource "aws_sns_topic" "user_updates" {
-  name = "user-updates-topic"
+resource "aws_sns_topic" "user_verification" {
+  name = "user-verification-topic"
 }
