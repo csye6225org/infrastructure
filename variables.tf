@@ -160,3 +160,47 @@ variable "prod_account_id" {
   type        = string
   description = "Prod Account Id"
 }
+
+
+// ############################################
+//  Lambda
+// ############################################
+
+variable "lambda_s3_bucket_name"{
+    type        = string
+  description = "S3 bucket for lambda function"
+}
+
+variable "sub_domain_name"{
+  type        = string
+  description = "Sun Domain Name"
+}
+
+variable "time_to_live" {
+  type        = number
+  description = "time_to_live"
+}
+
+// ############################################
+//  Dynamo DB
+// ############################################
+
+variable "dynamoDB_table_name"{
+    type        = string
+  description = "Dynamo DB name"
+}
+
+variable "dynamoDB_hashKey"{
+    type        = string
+  description = "Dynamo DB hash key"
+}
+
+variable "dynamoDB_writeCapacity" {
+  type        = number
+  description = "dynamo db write capacity"
+}
+
+variable "dynamoDB_readCapacity" {
+  type        = number
+  description = "dynamo db read capacity"
+}

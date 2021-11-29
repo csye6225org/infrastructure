@@ -250,7 +250,7 @@ resource "aws_db_instance" "rds" {
   vpc_security_group_ids   = [aws_security_group.database_sg.id]
 }
 
-resource "aws_db_instance" "rds_read_replica" {
+resource "aws_db_instance" "rds_read_replica" { // handle multi AZ
   identifier             = var.rds_replica_name
   replicate_source_db    = aws_db_instance.rds.id
   allocated_storage      = var.rds_allocated_storage
@@ -258,7 +258,6 @@ resource "aws_db_instance" "rds_read_replica" {
   engine_version         = var.rds_engine_version
   instance_class         = var.rds_db_instance_class
   multi_az               = var.rds_multi_az_allowance
-  // parameter_group_name   = aws_db_parameter_group.db_pg.id
   skip_final_snapshot      = var.rds_db_skip_final_snapshot
   publicly_accessible    = var.rds_db_public_accessibility
   vpc_security_group_ids = [aws_security_group.database_sg.id]
@@ -639,3 +638,126 @@ resource "aws_lb_target_group" "alb_tg" {
 resource "aws_sns_topic" "user_verification" {
   name = "user-verification-topic"
 }
+
+//############################################
+// Lambda
+//############################################
+
+// resource "aws_s3_bucket" "s3_bucket_lambda" {
+//   bucket        = "${var.lambda_s3_bucket_name}"
+//   acl           = "private"
+//   force_destroy = true
+//   server_side_encryption_configuration {
+//     rule {
+//       apply_server_side_encryption_by_default {
+//         sse_algorithm = "AES256"
+//       }
+//     }
+//   }
+//   tags = {
+//     Name        = "lambda-codedeploy"
+//   }
+
+//   lifecycle_rule {
+//     enabled = true
+//     transition {
+//       days          = 30
+//       storage_class = "STANDARD_IA"
+//     }
+//   }
+
+// }
+
+resource "aws_lambda_function" "send_verification_email" {
+  function_name = "send_verification_email"
+  filename      = "lambda_function-1.0-SNAPSHOT.jar"
+  role          = "${aws_iam_role.iam_for_lambda_sns.arn}"
+  handler       = "SendEmail::handleRequest"
+  runtime       = "java8"
+}
+
+resource "aws_lambda_permission" "invoke_lambda_from_sns" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.send_verification_email.function_name}"
+  principal     = "sns.amazonaws.com"
+  source_arn    = "${aws_sns_topic.user_verification.arn}"
+}
+
+resource "aws_sns_topic_subscription" "email_request_sns" {
+  topic_arn = aws_sns_topic.user_verification.arn
+  protocol = "lambda"
+  endpoint = aws_lambda_function.send_verification_email.arn
+}
+
+resource "aws_iam_role" "iam_for_lambda_sns" {
+  name = "iam_for_lambda"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_route53" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_SNS" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_SES" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+}
+
+// resource "aws_iam_role_policy_attachment" "lambda_S3" {
+//   role = aws_iam_role.iam_for_lambda_sns.name
+//   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+// }
+
+resource "aws_iam_role_policy_attachment" "lambda_basicExecutionRole" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_DynamoDBExecutionRole" {
+  role = aws_iam_role.iam_for_lambda_sns.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole"
+}
+
+//############################################
+// DynamoDB
+//############################################
+
+resource "aws_dynamodb_table" "dynamoDB_Table" {
+  name                        = "${var.dynamoDB_table_name}"
+  hash_key                    = "${var.dynamoDB_hashKey}"
+  write_capacity              = "${var.dynamoDB_writeCapacity}"
+  read_capacity               = "${var.dynamoDB_readCapacity}"
+
+  attribute {
+    name = "${var.dynamoDB_hashKey}"
+    type = "S"
+  }
+}
+
