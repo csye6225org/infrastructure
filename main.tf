@@ -643,37 +643,12 @@ resource "aws_sns_topic" "user_verification" {
 // Lambda
 //############################################
 
-// resource "aws_s3_bucket" "s3_bucket_lambda" {
-//   bucket        = "${var.lambda_s3_bucket_name}"
-//   acl           = "private"
-//   force_destroy = true
-//   server_side_encryption_configuration {
-//     rule {
-//       apply_server_side_encryption_by_default {
-//         sse_algorithm = "AES256"
-//       }
-//     }
-//   }
-//   tags = {
-//     Name        = "lambda-codedeploy"
-//   }
-
-//   lifecycle_rule {
-//     enabled = true
-//     transition {
-//       days          = 30
-//       storage_class = "STANDARD_IA"
-//     }
-//   }
-
-// }
-
 resource "aws_lambda_function" "send_verification_email" {
   function_name = "send_verification_email"
-  filename      = "lambda_function-1.0-SNAPSHOT.jar"
+  filename      = "SendEmail.zip"
   role          = "${aws_iam_role.iam_for_lambda_sns.arn}"
-  handler       = "SendEmail::handleRequest"
-  runtime       = "java8"
+  handler       = "index.handler"
+  runtime       = "nodejs12.x"
 }
 
 resource "aws_lambda_permission" "invoke_lambda_from_sns" {
@@ -710,6 +685,26 @@ resource "aws_iam_role" "iam_for_lambda_sns" {
 EOF
 }
 
+resource "aws_iam_policy" "iam_for_lambda_to_send_email" {
+  name        = "iam_for_lambda_to_send_email"
+  description = "iam_for_lambda_to_send_email"
+  policy      = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_role_policy_attachment" "lambda_route53" {
   role = aws_iam_role.iam_for_lambda_sns.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
@@ -720,9 +715,14 @@ resource "aws_iam_role_policy_attachment" "lambda_SNS" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
 }
 
+// resource "aws_iam_role_policy_attachment" "lambda_SES" {
+//   role = aws_iam_role.iam_for_lambda_sns.name
+//   policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+// }
+
 resource "aws_iam_role_policy_attachment" "lambda_SES" {
   role = aws_iam_role.iam_for_lambda_sns.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+  policy_arn = aws_iam_policy.iam_for_lambda_to_send_email.arn
 }
 
 // resource "aws_iam_role_policy_attachment" "lambda_S3" {
