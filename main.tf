@@ -375,6 +375,30 @@ EOF
   }
 }
 
+resource "aws_iam_policy" "iam_for_dynamodb_access" {
+  name        = "iam_for_dynamodb_access"
+  description = "iam_for_dynamodb_access"
+  policy      = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ReadOnlyAPIActionsOnBooks",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:BatchGetItem",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:ConditionCheckItem"
+            ],
+            "Resource": "arn:aws:dynamodb:${var.ec2_env_aws_region}:${var.prod_account_id}:table/${var.dynamoDB_table_name}"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_1" {
   role       = aws_iam_role.ec2_iam_role.name
   policy_arn = aws_iam_policy.CodeDeploy-EC2-S3.arn
@@ -393,6 +417,11 @@ resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_3" {
 resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_4" {
   role       = aws_iam_role.ec2_iam_role.name
   policy_arn = aws_iam_policy.PublishSNS.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment_5" {
+  role       = aws_iam_role.ec2_iam_role.name
+  policy_arn = aws_iam_policy.iam_for_dynamodb_access.arn
 }
 
 //############################################
