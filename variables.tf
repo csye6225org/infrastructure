@@ -55,6 +55,14 @@ variable "rds_multi_az_allowance" {
   type        = bool
   description = "Allowance for multi az deployment"
 }
+variable "rds_availability_zone_1" {
+  type        = string
+  description = "rds_availability_zone_1"
+}
+variable "rds_availability_zone_2" {
+  type        = string
+  description = "rds_availability_zone_2"
+}
 variable "rds_db_identifier" {
   type        = string
   description = "Database Identifier"
@@ -166,12 +174,12 @@ variable "prod_account_id" {
 //  Lambda
 // ############################################
 
-variable "lambda_s3_bucket_name"{
-    type        = string
+variable "lambda_s3_bucket_name" {
+  type        = string
   description = "S3 bucket for lambda function"
 }
 
-variable "sub_domain_name"{
+variable "sub_domain_name" {
   type        = string
   description = "Sun Domain Name"
 }
@@ -185,13 +193,13 @@ variable "time_to_live" {
 //  Dynamo DB
 // ############################################
 
-variable "dynamoDB_table_name"{
-    type        = string
+variable "dynamoDB_table_name" {
+  type        = string
   description = "Dynamo DB name"
 }
 
-variable "dynamoDB_hashKey"{
-    type        = string
+variable "dynamoDB_hashKey" {
+  type        = string
   description = "Dynamo DB hash key"
 }
 
