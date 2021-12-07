@@ -236,7 +236,6 @@ resource "aws_db_instance" "rds" {
   engine                   = var.rds_engine
   engine_version           = var.rds_engine_version
   instance_class           = var.rds_db_instance_class
-  // multi_az                 = var.rds_multi_az_allowance
   availability_zone        = var.rds_availability_zone_1
   identifier               = var.rds_db_identifier
   username                 = var.rds_db_username
@@ -249,6 +248,8 @@ resource "aws_db_instance" "rds" {
   backup_retention_period  = 1
   delete_automated_backups = false
   vpc_security_group_ids   = [aws_security_group.database_sg.id]
+  storage_encrypted        = true
+  kms_key_id               = aws_kms_key.kms_cmk_for_rds.arn
 }
 
 resource "aws_db_instance" "rds_read_replica" { // handle multi AZ
@@ -258,11 +259,12 @@ resource "aws_db_instance" "rds_read_replica" { // handle multi AZ
   engine                 = var.rds_engine
   engine_version         = var.rds_engine_version
   instance_class         = var.rds_db_instance_class
-  // multi_az               = var.rds_multi_az_allowance
   availability_zone      = var.rds_availability_zone_2
   skip_final_snapshot    = var.rds_db_skip_final_snapshot
   publicly_accessible    = var.rds_db_public_accessibility
   vpc_security_group_ids = [aws_security_group.database_sg.id]
+  // storage_encrypted      = true
+  // kms_key_id             = aws_kms_key.kms_cmk_for_rds_rr.arn
 }
 
 
@@ -545,6 +547,8 @@ resource "aws_launch_configuration" "asg_launch_config" {
     delete_on_termination = var.ec2_delete_on_termination_flag
     volume_type           = var.ec2_volume_type
     volume_size           = var.ec2_volume_size
+    // encrypted             = true
+    // kms_key_id  = aws_ebs_default_kms_key.example.arn
   }
   user_data = <<EOF
 #!/bin/bash
@@ -792,3 +796,34 @@ resource "aws_dynamodb_table" "dynamoDB_Table" {
   }
 }
 
+//############################################
+// KMS keys
+//############################################
+
+resource "aws_kms_key" "kms_cmk_for_rds" {
+  description             = "KMS key for RDS"
+  deletion_window_in_days = 7
+  tags = {
+    Name = "kms_cmk_for_rds"
+  }
+}
+
+// resource "aws_kms_key" "kms_cmk_for_rds_rr" {
+//   description             = "KMS key for RDS Read Replica"
+//   deletion_window_in_days = 7
+//   tags = {
+//     Name = "kms_cmk_for_rds_rr"
+//   }
+// }
+
+resource "aws_kms_key" "kms_cmk_for_ec2_ebs" {
+  description             = "KMS key for EC2 EBS Volume"
+  deletion_window_in_days = 7
+  tags = {
+    Name = "kms_cmk_for_ec2_ebs"
+  }
+}
+
+resource "aws_ebs_default_kms_key" "example" {
+  key_arn = aws_kms_key.kms_cmk_for_ec2_ebs.arn
+}
