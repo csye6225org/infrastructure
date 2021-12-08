@@ -98,9 +98,15 @@ resource "aws_route_table_association" "rta3" {
 resource "aws_security_group" "alb_sg" {
   name   = "alb_sg"
   vpc_id = aws_vpc.vpc.id
+  // ingress {
+  //   from_port   = 80
+  //   to_port     = 80
+  //   protocol    = "tcp"
+  //   cidr_blocks = [var.source_cidr_block]
+  // }
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = [var.source_cidr_block]
   }
@@ -141,6 +147,12 @@ resource "aws_security_group" "webapp_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
+  // ingress {
+  //   from_port       = 443
+  //   to_port         = 443
+  //   protocol        = "tcp"
+  //   security_groups = [aws_security_group.alb_sg.id]
+  // }
   ingress {
     from_port   = 22
     to_port     = 22
@@ -640,12 +652,41 @@ resource "aws_lb" "alb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.subnet1.id, aws_subnet.subnet2.id, aws_subnet.subnet3.id]
+  timeouts {
+    create = "30m"
+    delete = "30m"
+  }
 }
+
+// resource "aws_lb_listener" "alb_listener" {
+//   load_balancer_arn = aws_lb.alb.arn
+//   port              = "80"
+//   protocol          = "HTTP"
+//   default_action {
+//     target_group_arn = aws_lb_target_group.alb_tg.id
+//     type             = "forward"
+//   }
+// }
+
+// resource "aws_lb_target_group" "alb_tg" {
+//   name     = "alb-tg"
+//   port     = 80
+//   protocol = "HTTP"
+//   vpc_id   = aws_vpc.vpc.id
+//   health_check {
+//     healthy_threshold   = 3
+//     unhealthy_threshold = 3
+//     interval            = 10
+//     timeout             = 3
+//     path                = "/"
+//   }
+// }
 
 resource "aws_lb_listener" "alb_listener" {
   load_balancer_arn = aws_lb.alb.arn
-  port              = "80"
-  protocol          = "HTTP"
+  port              = "443"
+  protocol          = "HTTPS"
+  certificate_arn   = data.aws_acm_certificate.example.arn
   default_action {
     target_group_arn = aws_lb_target_group.alb_tg.id
     type             = "forward"
@@ -665,7 +706,6 @@ resource "aws_lb_target_group" "alb_tg" {
     path                = "/"
   }
 }
-
 //############################################
 // SNS Topic
 //############################################
@@ -803,9 +843,6 @@ resource "aws_dynamodb_table" "dynamoDB_Table" {
 resource "aws_kms_key" "kms_cmk_for_rds" {
   description             = "KMS key for RDS"
   deletion_window_in_days = 7
-  tags = {
-    Name = "kms_cmk_for_rds"
-  }
 }
 
 // resource "aws_kms_key" "kms_cmk_for_rds_rr" {
@@ -819,11 +856,13 @@ resource "aws_kms_key" "kms_cmk_for_rds" {
 resource "aws_kms_key" "kms_cmk_for_ec2_ebs" {
   description             = "KMS key for EC2 EBS Volume"
   deletion_window_in_days = 7
-  tags = {
-    Name = "kms_cmk_for_ec2_ebs"
-  }
 }
 
 resource "aws_ebs_default_kms_key" "example" {
   key_arn = aws_kms_key.kms_cmk_for_ec2_ebs.arn
+}
+
+data "aws_acm_certificate" "example" {
+  domain   = var.sub_domain_name
+  statuses = ["ISSUED"]
 }
