@@ -234,6 +234,11 @@ data "aws_iam_policy_document" "s3_iam_policy_document" {
 
 resource "aws_db_parameter_group" "db_pg" {
   family = var.rds_family
+  // parameter {
+  //   name         = "rds.force_ssl"
+  //   value        = "1"
+  //   apply_method = "pending-reboot"
+  // }
 }
 
 resource "aws_db_subnet_group" "db_sg" {
@@ -264,20 +269,18 @@ resource "aws_db_instance" "rds" {
   kms_key_id               = aws_kms_key.kms_cmk_for_rds.arn
 }
 
-resource "aws_db_instance" "rds_read_replica" { // handle multi AZ
-  identifier             = var.rds_replica_name
-  replicate_source_db    = aws_db_instance.rds.id
-  allocated_storage      = var.rds_allocated_storage
-  engine                 = var.rds_engine
-  engine_version         = var.rds_engine_version
-  instance_class         = var.rds_db_instance_class
-  availability_zone      = var.rds_availability_zone_2
-  skip_final_snapshot    = var.rds_db_skip_final_snapshot
-  publicly_accessible    = var.rds_db_public_accessibility
-  vpc_security_group_ids = [aws_security_group.database_sg.id]
-  // storage_encrypted      = true
-  // kms_key_id             = aws_kms_key.kms_cmk_for_rds_rr.arn
-}
+// resource "aws_db_instance" "rds_read_replica" { 
+//   identifier             = var.rds_replica_name
+//   replicate_source_db    = aws_db_instance.rds.id
+//   allocated_storage      = var.rds_allocated_storage
+//   engine                 = var.rds_engine
+//   engine_version         = var.rds_engine_version
+//   instance_class         = var.rds_db_instance_class
+//   availability_zone      = var.rds_availability_zone_2
+//   skip_final_snapshot    = var.rds_db_skip_final_snapshot
+//   publicly_accessible    = var.rds_db_public_accessibility
+//   vpc_security_group_ids = [aws_security_group.database_sg.id]
+// }
 
 
 //############################################
@@ -559,7 +562,7 @@ resource "aws_launch_configuration" "asg_launch_config" {
     delete_on_termination = var.ec2_delete_on_termination_flag
     volume_type           = var.ec2_volume_type
     volume_size           = var.ec2_volume_size
-    // encrypted             = true
+    encrypted             = true
     // kms_key_id  = aws_ebs_default_kms_key.example.arn
   }
   user_data = <<EOF
@@ -657,30 +660,6 @@ resource "aws_lb" "alb" {
     delete = "30m"
   }
 }
-
-// resource "aws_lb_listener" "alb_listener" {
-//   load_balancer_arn = aws_lb.alb.arn
-//   port              = "80"
-//   protocol          = "HTTP"
-//   default_action {
-//     target_group_arn = aws_lb_target_group.alb_tg.id
-//     type             = "forward"
-//   }
-// }
-
-// resource "aws_lb_target_group" "alb_tg" {
-//   name     = "alb-tg"
-//   port     = 80
-//   protocol = "HTTP"
-//   vpc_id   = aws_vpc.vpc.id
-//   health_check {
-//     healthy_threshold   = 3
-//     unhealthy_threshold = 3
-//     interval            = 10
-//     timeout             = 3
-//     path                = "/"
-//   }
-// }
 
 resource "aws_lb_listener" "alb_listener" {
   load_balancer_arn = aws_lb.alb.arn
@@ -790,20 +769,10 @@ resource "aws_iam_role_policy_attachment" "lambda_SNS" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
 }
 
-// resource "aws_iam_role_policy_attachment" "lambda_SES" {
-//   role = aws_iam_role.iam_for_lambda_sns.name
-//   policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
-// }
-
 resource "aws_iam_role_policy_attachment" "lambda_SES" {
   role       = aws_iam_role.iam_for_lambda_sns.name
   policy_arn = aws_iam_policy.iam_for_lambda_to_send_email.arn
 }
-
-// resource "aws_iam_role_policy_attachment" "lambda_S3" {
-//   role = aws_iam_role.iam_for_lambda_sns.name
-//   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-// }
 
 resource "aws_iam_role_policy_attachment" "lambda_basicExecutionRole" {
   role       = aws_iam_role.iam_for_lambda_sns.name
@@ -845,17 +814,10 @@ resource "aws_kms_key" "kms_cmk_for_rds" {
   deletion_window_in_days = 7
 }
 
-// resource "aws_kms_key" "kms_cmk_for_rds_rr" {
-//   description             = "KMS key for RDS Read Replica"
-//   deletion_window_in_days = 7
-//   tags = {
-//     Name = "kms_cmk_for_rds_rr"
-//   }
-// }
-
 resource "aws_kms_key" "kms_cmk_for_ec2_ebs" {
   description             = "KMS key for EC2 EBS Volume"
   deletion_window_in_days = 7
+  policy = data.aws_iam_policy_document.ebs_encryption_key_policy_document_1.json
 }
 
 resource "aws_ebs_default_kms_key" "example" {
@@ -865,4 +827,56 @@ resource "aws_ebs_default_kms_key" "example" {
 data "aws_acm_certificate" "example" {
   domain   = var.sub_domain_name
   statuses = ["ISSUED"]
+}
+
+data "aws_iam_policy_document" "ebs_encryption_key_policy_document_1" {
+  version = "2012-10-17"
+  statement {
+    effect    = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = [
+      "*"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = [
+        "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+        "arn:aws:iam::${var.prod_account_id}:user/aws_cli"
+      ]
+    }
+  } 
+  statement {
+    effect    = "Allow"
+    actions = [
+        "kms:Create*",
+        "kms:Describe*",
+        "kms:Enable*",
+        "kms:List*",
+        "kms:Put*",
+        "kms:Update*",
+        "kms:Revoke*",
+        "kms:Disable*",
+        "kms:Get*",
+        "kms:Delete*",
+        "kms:ScheduleKeyDeletion",
+        "kms:CancelKeyDeletion"
+    ]
+    resources = [
+      "*"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = [
+        "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+        "arn:aws:iam::${var.prod_account_id}:user/aws_cli"
+      ]
+    }
+    
+  }
 }
