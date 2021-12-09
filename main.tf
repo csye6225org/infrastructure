@@ -269,18 +269,18 @@ resource "aws_db_instance" "rds" {
   kms_key_id               = aws_kms_key.kms_cmk_for_rds.arn
 }
 
-// resource "aws_db_instance" "rds_read_replica" { 
-//   identifier             = var.rds_replica_name
-//   replicate_source_db    = aws_db_instance.rds.id
-//   allocated_storage      = var.rds_allocated_storage
-//   engine                 = var.rds_engine
-//   engine_version         = var.rds_engine_version
-//   instance_class         = var.rds_db_instance_class
-//   availability_zone      = var.rds_availability_zone_2
-//   skip_final_snapshot    = var.rds_db_skip_final_snapshot
-//   publicly_accessible    = var.rds_db_public_accessibility
-//   vpc_security_group_ids = [aws_security_group.database_sg.id]
-// }
+resource "aws_db_instance" "rds_read_replica" { 
+  identifier             = var.rds_replica_name
+  replicate_source_db    = aws_db_instance.rds.id
+  allocated_storage      = var.rds_allocated_storage
+  engine                 = var.rds_engine
+  engine_version         = var.rds_engine_version
+  instance_class         = var.rds_db_instance_class
+  availability_zone      = var.rds_availability_zone_2
+  skip_final_snapshot    = var.rds_db_skip_final_snapshot
+  publicly_accessible    = var.rds_db_public_accessibility
+  vpc_security_group_ids = [aws_security_group.database_sg.id]
+}
 
 
 //############################################
@@ -847,7 +847,8 @@ data "aws_iam_policy_document" "ebs_encryption_key_policy_document_1" {
       type        = "AWS"
       identifiers = [
         "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-        "arn:aws:iam::${var.prod_account_id}:user/aws_cli"
+        "arn:aws:iam::${var.prod_account_id}:user/aws_cli",
+        "arn:aws:iam::${var.prod_account_id}:user/varad"
       ]
     }
   } 
@@ -874,7 +875,8 @@ data "aws_iam_policy_document" "ebs_encryption_key_policy_document_1" {
       type        = "AWS"
       identifiers = [
         "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-        "arn:aws:iam::${var.prod_account_id}:user/aws_cli"
+        "arn:aws:iam::${var.prod_account_id}:user/aws_cli",
+        "arn:aws:iam::${var.prod_account_id}:user/varad"
       ]
     }
     
