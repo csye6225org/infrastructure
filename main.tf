@@ -234,11 +234,11 @@ data "aws_iam_policy_document" "s3_iam_policy_document" {
 
 resource "aws_db_parameter_group" "db_pg" {
   family = var.rds_family
-  // parameter {
-  //   name         = "rds.force_ssl"
-  //   value        = "1"
-  //   apply_method = "pending-reboot"
-  // }
+  parameter {
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
+  }
 }
 
 resource "aws_db_subnet_group" "db_sg" {
@@ -848,7 +848,7 @@ data "aws_iam_policy_document" "ebs_encryption_key_policy_document_1" {
       identifiers = [
         "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
         "arn:aws:iam::${var.prod_account_id}:user/aws_cli",
-        "arn:aws:iam::${var.prod_account_id}:user/varad"
+        "arn:aws:iam::${var.prod_account_id}:root"
       ]
     }
   } 
@@ -876,9 +876,8 @@ data "aws_iam_policy_document" "ebs_encryption_key_policy_document_1" {
       identifiers = [
         "arn:aws:iam::${var.prod_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
         "arn:aws:iam::${var.prod_account_id}:user/aws_cli",
-        "arn:aws:iam::${var.prod_account_id}:user/varad"
+        "arn:aws:iam::${var.prod_account_id}:root"
       ]
     }
-    
   }
 }

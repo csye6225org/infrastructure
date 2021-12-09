@@ -5,6 +5,37 @@
 1. Amazon Web Services
 2. Hashicorp Terraform
 ```
+# Assignment 8: Some Important Commands
+
+1. Command to import ssl certificate (Certificate, CA bundle, Unencrypted private key) to AWS Certificate Manager
+
+```
+export AWS_PROFILE=prod
+
+aws acm import-certificate --certificate fileb://prod_varaddesai_me.crt \
+      --certificate-chain fileb://prod_varaddesai_me.ca-bundle \
+      --private-key fileb://domain_ssl_unencrypted_pk.key
+```
+
+2. Command to generate CSR for ssl activation (used password to encrypt private key)
+
+```
+openssl req -newkey rsa:2048 -keyout domain_ssl_pk.key -out domain_ssl_csr.csr
+```
+
+3. Move to correct file location
+
+```
+cd /home/varad/Desktop/NSC/ssl_cert_files/prod_varaddesai.me
+```
+
+4. Command to decrypt private key with password
+
+```
+openssl rsa -in domain_ssl_pk.key -out domain_ssl_unencrypted_pk.key
+```
+
+
 
 # Assignment 2: How to Demo?
 
@@ -139,32 +170,3 @@ Use contents from the following file.
 ...
 
 
-# Assignment 8: Some Important Commands
-
-1. Command to generate CSR for ssl activation (used password to encrypt private key)
-
-```
-openssl req -newkey rsa:2048 -keyout domain_ssl_pk.key -out domain_ssl_csr.csr
-```
-
-2. Move to correct file location
-
-```
-cd /home/varad/Desktop/NSC/ssl_cert_files/prod_varaddesai.me
-```
-
-3. Command to decrypt private key with password
-
-```
-openssl rsa -in domain_ssl_pk.key -out domain_ssl_unencrypted_pk.key
-```
-
-4. Command to import ssl certificate (Certificate, CA bundle, Unencrypted private key) to AWS Certificate Manager
-
-```
-export AWS_PROFILE=prod
-
-aws acm import-certificate --certificate fileb://prod_varaddesai_me.crt \
-      --certificate-chain fileb://prod_varaddesai_me.ca-bundle \
-      --private-key fileb://domain_ssl_unencrypted_pk.key
-```
